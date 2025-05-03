@@ -7,13 +7,13 @@ import os
 
 def load_urdf() -> List[Joint]:
 
-    print(os.getcwd())
     with open(URDF_FILE_PATH) as f:
         xml = xmltodict.parse(
             f.read()
         )
 
     joins = TypeAdapter(List[Joint]).validate_python(xml["robot"]["joint"])
+
 
     for (prev, next) in zip(joins[:-1], joins[1:]):
         assert prev.child == next.parent, "The joins should be loaded in order"
