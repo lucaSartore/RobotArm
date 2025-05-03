@@ -1,0 +1,6 @@
+pydantic==2.10.6
+xmltodict
+# new version (with type annotations)
+numpy==1.20.0
+# old version, install this one if ros stop working
+# numpy=1.17.4
