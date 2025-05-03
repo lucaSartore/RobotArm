@@ -21,3 +21,9 @@ source ./devel/setup.bash
 ```bash
 roslaunch robot_arm visualize.launch
 ```
+
+### Running python scripts
+To instead run one of the python scripts you can use
+```bash
+rosrun robot_arm main.py
+```
