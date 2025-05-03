@@ -10,7 +10,7 @@
      
     
     <!-- run rviz -->
-    <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rviz_conf) -f base_link"  />
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rviz_conf) -f world"  />
 
 
 	
