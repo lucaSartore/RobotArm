@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, model_validator
-from typing import List
+from typing import List, Literal
 
 
 class LinkRef(BaseModel):
@@ -22,7 +22,7 @@ class Origin(BaseModel):
 
 class Joint(BaseModel):
     name: str = Field(alias='@name')
-    type: str = Field(alias='@type')
+    type: Literal['prismatic', 'revolute', 'fixed'] = Field(alias='@type')
     parent: LinkRef
     child: LinkRef
     origin: Origin

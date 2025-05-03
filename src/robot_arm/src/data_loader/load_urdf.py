@@ -13,5 +13,10 @@ def load_urdf() -> List[Joint]:
             f.read()
         )
 
-    return TypeAdapter(List[Joint]).validate_python(xml["robot"]["joint"])
+    joins = TypeAdapter(List[Joint]).validate_python(xml["robot"]["joint"])
+
+    for (prev, next) in zip(joins[:-1], joins[1:]):
+        assert prev.child == next.parent, "The joins should be loaded in order"
+
+    return joins
 
