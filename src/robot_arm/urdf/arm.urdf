@@ -1,9 +1,7 @@
 <?xml version="1.0" ?>
 <robot name="arm" >
   <gazebo>
-    <plugin filename="libgazebo_ros_control.so" name="ros_control">
-    </plugin>
-
+    <plugin filename="libgazebo_ros_control.so" name="ros_control" />
   </gazebo>
 
   <link name="world"/>
@@ -15,6 +13,12 @@
   </joint>
  
   <link name="base_link">
+    <inertial>
+      <mass value="10.0"/>
+      <origin rpy="0 0 0" xyz="0.0 0.0 0.0"/>
+      <!-- Approximated as a small cube: I = 1/12*m*(l^2 + w^2) -->
+      <inertia ixx="0.033" ixy="0.0" ixz="0.0" iyy="0.033" iyz="0.0" izz="0.033"/>
+    </inertial>
   </link>
 
   <joint name="shoulder_join_1" type="revolute">
@@ -24,7 +28,6 @@
     <axis xyz="0 0 1"/>
     <limit effort="150.0" lower="-3.14159265" upper="3.14159265" velocity="3.15"/>
   </joint>
-
 
   <link name="shoulder_link_1">
     <visual>
@@ -37,19 +40,22 @@
         <cylinder length="0.1" radius="0.4"/>
       </geometry>
     </collision>
+    <inertial>
+      <mass value="8.393"/>
+      <origin rpy="0 0 0" xyz="0.0 0.0 0.0"/>
+      <!-- Cylinder about its center: Ixx=Iyy=1/12*m*(3r^2 + h^2), Izz=1/2*m*r^2 -->
+      <inertia ixx="0.227" ixy="0.0" ixz="0.0" iyy="0.227" iyz="0.0" izz="0.015"/>
+    </inertial>
   </link>
-
 
   <joint name="shoulder_join_2" type="revolute">
     <parent link="shoulder_link_1"/>
     <child link="shoulder_link_2"/>
-
     <origin rpy="1.570796325 0.0 0.0" xyz="0.0 0.0 0.0"/>
     <axis xyz="0 0 1"/>
     <limit effort="150.0" lower="0.0" upper="3.14159265" velocity="3.15"/>
     <dynamics damping="0.0" friction="0.0"/>
   </joint>
-
 
   <link name="shoulder_link_2">
     <visual>
@@ -69,19 +75,14 @@
     </inertial>
   </link>
 
-
-
   <joint name="main_arm_join" type="prismatic">
     <parent link="shoulder_link_2"/>
     <child link="main_arm_link"/>
     <origin rpy="0.0 1.570796325 0.0" xyz="0.5 0.0 0.0"/>
     <axis xyz="0 0 1"/>
-    <limit effort="150.0" lower="0.0" upper="6.5" velocity="2"/>
+    <limit effort="1500000000.0" lower="0.0" upper="6.5" velocity="2"/>
     <dynamics damping="100" friction="100"/>
   </joint>
-
-
-
 
   <link name="main_arm_link">
     <visual>
@@ -103,8 +104,6 @@
     </inertial>
   </link>
 
-
-
   <joint name="elbow_join_1" type="revolute">
     <parent link="main_arm_link"/>
     <child link="elbow_link"/>
@@ -113,8 +112,6 @@
     <limit effort="28.0" lower="-3.14159265" upper="3.14159265" velocity="3.2"/>
     <dynamics damping="0.0" friction="0.0"/>
   </joint>
-
-
 
   <link name="elbow_link">
     <visual>
@@ -143,7 +140,6 @@
     <dynamics damping="0.0" friction="0.0"/>
   </joint>
 
-
   <link name="secondary_arm_link">
     <visual>
       <geometry>
@@ -169,7 +165,6 @@
     <origin rpy="0.0 0.0 -1.570796325" xyz="3.0 0.0 0.0"/>
   </joint>
 
-
   <link name="third_arm_link">
     <visual>
       <geometry>
@@ -189,13 +184,11 @@
     </inertial>
   </link>
 
-
   <joint name="ee_join" type="fixed">
     <parent link="third_arm_link"/>
     <child link="ee_link"/>
     <origin rpy="0.0 0.0 0" xyz="0.2 0.0 0.0"/>
   </joint>
-
 
   <link name="ee_link">
     <visual>
@@ -213,4 +206,5 @@
       <inertia ixx="0.111172755531" ixy="0.0" ixz="0.0" iyy="0.111172755531" iyz="0.0" izz="0.21942"/>
     </inertial>
   </link>
+
 </robot>

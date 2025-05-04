@@ -132,21 +132,21 @@ def build_jacobian(joints: List[Joint], qs: List[float]) -> Array:
 
 def test():
     data = load_urdf()
-    data = data[0:4]
+    # data = data[0:4]
 
     q = [
         0.0,
         0.0,
         0.0,
-        # 0.0,
-        # 0.0,
+        0.0,
+        -3.1415926/2,
     ]
     qd = np.asarray([
-        0.0,
         1.0,
         0.0,
-        # 0.0,
-        # 0.0,
+        0.0,
+        0.0,
+        0.0,
     ])
 
 

@@ -1,0 +1,116 @@
+from time import sleep
+from typing import Union, List
+from pinocchio import RobotWrapper
+from constants.path import URDF_FILE_PATH
+import pinocchio as pin
+import numpy as np
+import rospy as ros
+from sensor_msgs.msg import JointState
+import numpy as np
+import roslaunch
+import rospkg
+
+
+from internal_types.array import Array
+
+
+#wrapper around pinocchio, to add type annotations
+def rnea(robot: RobotWrapper, q: Array, qd: Array, qdd: Array) -> Array:
+    return pin.rnea(robot.model, robot.data, q, qd, qdd) #type: ignore
+
+def test():
+    # Notes from professor at page 26
+    # https://drive.google.com/drive/folders/17MCKvglqk94NsF3zj4OkmZN5_yU-wxtq
+
+    N_JOINS = 5
+    FRICTION_COEFFICIENT = 6
+
+    ros_pub = RosPub()
+    sleep(3)
+    zero_vec = np.array([0.0] * N_JOINS)
+
+    q =   np.array([0.0] * N_JOINS)
+    qd =  np.array([0.0] * N_JOINS)
+    qdd = np.array([0.0] * N_JOINS)
+
+    qd[0] = 3
+    qd[1] = -1
+    dt = 0.01
+
+    robot = RobotWrapper.BuildFromURDF(URDF_FILE_PATH)
+
+    for i in range(1000):
+        
+        # non linear effects (due to inertia and gravity)
+        h = rnea(robot, q, qd, zero_vec)
+
+        q[2] = 0
+
+        # inertia matrix
+        M = np.zeros((N_JOINS, N_JOINS))
+        for i in range(N_JOINS):
+            ei = zero_vec.copy()
+            ei[i] = 1
+            # the torque generated to keep G stable
+            g_effect = rnea(robot, q, zero_vec, zero_vec)
+
+            # the torques required to generate an unit acceleration on vector i 
+            tau = rnea(robot, q, zero_vec,ei)
+            
+            # compensation for gravity effect
+            tau -= g_effect #type: ignore
+
+            # build the inertia matrix partially
+            M[:,i] = tau
+
+        friction = - FRICTION_COEFFICIENT * qd
+        # calculate new accelerations
+        qdd = np.linalg.inv(M).dot(-h + friction) #type: ignore
+
+        # integration
+        qd = qd + qdd * dt
+        q = q + qd * dt + 0.5 * qdd * dt**2
+
+        ros_pub.publish(q, qd)
+        print(qd)
+
+        # sleep(0.05)
+
+class RosPub():
+    def __init__(self, robot_name = "arm", axis_names: Union[List[str], None] = None):
+        #launch rviz
+        uuid = roslaunch.rlutil.get_or_generate_uuid(None, False) #type: ignore
+        roslaunch.configure_logging(uuid)
+        package = rospkg.RosPack().get_path('robot_arm') + '/launch/visualize.launch'
+        cli_args = [package, f'robot_name:={robot_name}, test_joints:=false']
+        roslaunch_args = cli_args[1:]
+        roslaunch_file = [(roslaunch.rlutil.resolve_launch_arguments(cli_args)[0], roslaunch_args)] #type: ignore
+        parent = roslaunch.parent.ROSLaunchParent(uuid, roslaunch_file) #type: ignore
+        parent.start()
+        ros.loginfo("RVIZ started")
+        self.joint_pub = ros.Publisher("/joint_states", JointState, queue_size=1)
+        ros.init_node('sub_pub_node_python', anonymous=False, log_level=ros.FATAL)
+        self.axis_names = axis_names if axis_names is not None else [
+            "shoulder_join_1",
+            "shoulder_join_2",
+            "main_arm_join",
+            "elbow_join_1",
+            "elbow_join_2"
+        ]
+
+    def publish(self, q: Array, qd: Union[Array,None] = None, tau: Union[Array, None] = None):
+        """
+        publish a message updating the 
+        """
+        qd = qd if qd is not None else np.zeros(q.shape)
+        tau = tau if tau is not None else np.zeros(q.shape)
+                                
+        msg = JointState()
+        msg.header.stamp = ros.Time.now() 
+            
+        msg.name = self.axis_names
+        msg.position = q                
+        msg.velocity = qd                
+        msg.effort = tau              
+        
+        self.joint_pub.publish(msg)
