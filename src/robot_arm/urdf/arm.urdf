@@ -12,14 +12,7 @@
     <origin rpy="3.14159265 0.0 0.0" xyz="2.5 6.0 4.0"/>
   </joint>
  
-  <link name="base_link">
-    <inertial>
-      <mass value="10.0"/>
-      <origin rpy="0 0 0" xyz="0.0 0.0 0.0"/>
-      <!-- Approximated as a small cube: I = 1/12*m*(l^2 + w^2) -->
-      <inertia ixx="0.033" ixy="0.0" ixz="0.0" iyy="0.033" iyz="0.0" izz="0.033"/>
-    </inertial>
-  </link>
+  <link name="base_link"/>
 
   <joint name="shoulder_join_1" type="revolute">
     <parent link="base_link"/>
@@ -27,6 +20,7 @@
     <origin rpy="0.0 0.0 0.0" xyz="0.0 0.0 0.0"/>
     <axis xyz="0 0 1"/>
     <limit effort="150.0" lower="-3.14159265" upper="3.14159265" velocity="3.15"/>
+    <dynamics damping="5.0" friction="1.0"/>
   </joint>
 
   <link name="shoulder_link_1">
@@ -42,8 +36,6 @@
     </collision>
     <inertial>
       <mass value="8.393"/>
-      <origin rpy="0 0 0" xyz="0.0 0.0 0.0"/>
-      <!-- Cylinder about its center: Ixx=Iyy=1/12*m*(3r^2 + h^2), Izz=1/2*m*r^2 -->
       <inertia ixx="0.227" ixy="0.0" ixz="0.0" iyy="0.227" iyz="0.0" izz="0.015"/>
     </inertial>
   </link>
@@ -54,7 +46,7 @@
     <origin rpy="1.570796325 0.0 0.0" xyz="0.0 0.0 0.0"/>
     <axis xyz="0 0 1"/>
     <limit effort="150.0" lower="0.0" upper="3.14159265" velocity="3.15"/>
-    <dynamics damping="0.0" friction="0.0"/>
+    <dynamics damping="5.0" friction="1.0"/>
   </joint>
 
   <link name="shoulder_link_2">
@@ -80,8 +72,8 @@
     <child link="main_arm_link"/>
     <origin rpy="0.0 1.570796325 0.0" xyz="0.5 0.0 0.0"/>
     <axis xyz="0 0 1"/>
-    <limit effort="1500000000.0" lower="0.0" upper="6.5" velocity="2"/>
-    <dynamics damping="100" friction="100"/>
+    <limit effort="15000000000000.0" lower="0.0" upper="1" velocity="2"/>
+    <dynamics damping="5.0" friction="1.0"/>
   </joint>
 
   <link name="main_arm_link">
@@ -99,7 +91,7 @@
     </collision>
     <inertial>
       <mass value="2.275"/>
-      <origin rpy="0 0 0" xyz="0.0 0.0 0.0"/>
+      <origin rpy="0 0 0" xyz="0.0 0.0 -3.5"/>
       <inertia ixx="0.049443313556" ixy="0.0" ixz="0.0" iyy="0.049443313556" iyz="0.0" izz="0.004095"/>
     </inertial>
   </link>
@@ -109,8 +101,9 @@
     <child link="elbow_link"/>
     <origin rpy="-1.570796325 0.0 0.0" xyz="0.0 0.0 0.0"/>
     <axis xyz="0 0 1"/>
-    <limit effort="28.0" lower="-3.14159265" upper="3.14159265" velocity="3.2"/>
-    <dynamics damping="0.0" friction="0.0"/>
+    <!-- <limit effort="28.0" lower="-3.14159265" upper="3.14159265" velocity="3.2"/> -->
+    <limit effort="28.0"  velocity="3.2"/>
+    <dynamics damping="5.0" friction="1.0"/>
   </joint>
 
   <link name="elbow_link">
@@ -136,8 +129,9 @@
     <child link="secondary_arm_link"/>
     <origin rpy="0.0 -1.570796325 0.0" xyz="0.0 0.0 0.0"/>
     <axis xyz="0 0 1"/>
-    <limit effort="28.0" lower="-1.570796325" upper="1.570796325" velocity="3.2"/>
-    <dynamics damping="0.0" friction="0.0"/>
+    <!-- <limit effort="28.0" lower="-1.570796325" upper="1.570796325" velocity="3.2"/> -->
+    <limit effort="28.0"  velocity="3.2"/>
+    <dynamics damping="5.0" friction="1.0"/>
   </joint>
 
   <link name="secondary_arm_link">
@@ -155,6 +149,7 @@
     </collision>
     <inertial>
       <mass value="1.219"/>
+      <origin rpy="0 0 0" xyz="1.4 0.0 0.0"/>
       <inertia ixx="0.111172755531" ixy="0.0" ixz="0.0" iyy="0.111172755531" iyz="0.0" izz="0.21942"/>
     </inertial>
   </link>
@@ -180,6 +175,7 @@
     </collision>
     <inertial>
       <mass value="1.219"/>
+      <origin rpy="0 0 0" xyz="0.1 0.0 0.0"/>
       <inertia ixx="0.111172755531" ixy="0.0" ixz="0.0" iyy="0.111172755531" iyz="0.0" izz="0.21942"/>
     </inertial>
   </link>

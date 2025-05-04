@@ -32,14 +32,14 @@ class Axis(BaseModel):
 
 class Limit(BaseModel):
     effort: float = Field(alias='@effort')
-    lower: float = Field(alias='@lower')
-    upper: float = Field(alias='@upper')
+    lower: float = Field(alias='@lower', default=0)
+    upper: float = Field(alias='@upper', default=0)
     velocity: float = Field(alias='@velocity')
 
 
 class Dynamics(BaseModel):
-    damping: float = Field(alias='@damping')
-    friction: float = Field(alias='@friction')
+    damping: Optional[float] = Field(alias='@damping')
+    friction: Optional[float] = Field(alias='@friction')
 
 
 class Joint(BaseModel):
