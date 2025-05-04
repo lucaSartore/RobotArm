@@ -9,7 +9,7 @@ from sensor_msgs.msg import JointState
 import numpy as np
 import roslaunch
 import rospkg
-
+from data_loader.load_urdf import load_urdf
 
 from internal_types.array import Array
 
@@ -18,14 +18,17 @@ from internal_types.array import Array
 def rnea(robot: RobotWrapper, q: Array, qd: Array, qdd: Array) -> Array:
     return pin.rnea(robot.model, robot.data, q, qd, qdd) #type: ignore
 
-def test():
+def run_dynamics():
     # Notes from professor at page 26
     # https://drive.google.com/drive/folders/17MCKvglqk94NsF3zj4OkmZN5_yU-wxtq
 
     N_JOINS = 5
     FRICTION_COEFFICIENT = 6
 
-    ros_pub = RosPub()
+    joins = load_urdf()
+    joins = [x for x in joins if x.type != "fixed"]
+
+    ros_pub = RosPub("arm", [j.name for j in joins])
     sleep(3)
     zero_vec = np.array([0.0] * N_JOINS)
 
@@ -77,7 +80,7 @@ def test():
         # sleep(0.05)
 
 class RosPub():
-    def __init__(self, robot_name = "arm", axis_names: Union[List[str], None] = None):
+    def __init__(self, robot_name: str, axis_names: List[str]):
         #launch rviz
         uuid = roslaunch.rlutil.get_or_generate_uuid(None, False) #type: ignore
         roslaunch.configure_logging(uuid)
@@ -90,13 +93,7 @@ class RosPub():
         ros.loginfo("RVIZ started")
         self.joint_pub = ros.Publisher("/joint_states", JointState, queue_size=1)
         ros.init_node('sub_pub_node_python', anonymous=False, log_level=ros.FATAL)
-        self.axis_names = axis_names if axis_names is not None else [
-            "shoulder_join_1",
-            "shoulder_join_2",
-            "main_arm_join",
-            "elbow_join_1",
-            "elbow_join_2"
-        ]
+        self.axis_names = axis_names
 
     def publish(self, q: Array, qd: Union[Array,None] = None, tau: Union[Array, None] = None):
         """
