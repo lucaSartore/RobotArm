@@ -23,12 +23,30 @@ def run_dynamics():
     # https://drive.google.com/drive/folders/17MCKvglqk94NsF3zj4OkmZN5_yU-wxtq
 
     N_JOINS = 5
-    FRICTION_COEFFICIENT = 6
+    VISUAL = True
 
     joins = load_urdf()
     joins = [x for x in joins if x.type != "fixed"]
 
-    ros_pub = RosPub("arm", [j.name for j in joins])
+
+
+    damping = np.asarray(
+        [
+            x.dynamics.damping if x.dynamics and x.dynamics.damping else 0
+            for x in joins
+        ]
+    )
+    max_friction = np.asarray(
+        [
+            x.dynamics.friction if x.dynamics and x.dynamics.friction else 0
+            for x in joins
+        ]
+    )
+
+    if VISUAL:
+        ros_pub = RosPub("arm", [j.name for j in joins])
+
+    # sleep to wait rviz to start
     sleep(3)
     zero_vec = np.array([0.0] * N_JOINS)
 
@@ -36,18 +54,19 @@ def run_dynamics():
     qd =  np.array([0.0] * N_JOINS)
     qdd = np.array([0.0] * N_JOINS)
 
-    qd[0] = 3
-    qd[1] = -1
+    # qd[0] = 3
+    # qd[1] = -1
     dt = 0.01
 
     robot = RobotWrapper.BuildFromURDF(URDF_FILE_PATH)
 
-    for i in range(1000):
+    for i in range(2000):
         
         # non linear effects (due to inertia and gravity)
         h = rnea(robot, q, qd, zero_vec)
 
         q[2] = 0
+        qd[2] = 0
 
         # inertia matrix
         M = np.zeros((N_JOINS, N_JOINS))
@@ -66,18 +85,26 @@ def run_dynamics():
             # build the inertia matrix partially
             M[:,i] = tau
 
-        friction = - FRICTION_COEFFICIENT * qd
+        force = -h - damping * qd #type: ignore
+
+        # friction = -np.minimum(np.abs(force), max_friction) * np.sign(force) #type: ignore
+
+        # print(force)
+        # print(friction)
+        # force += friction
         # calculate new accelerations
-        qdd = np.linalg.inv(M).dot(-h + friction) #type: ignore
+        qdd = np.linalg.inv(M).dot(force) #type: ignore
 
         # integration
         qd = qd + qdd * dt
         q = q + qd * dt + 0.5 * qdd * dt**2
 
-        ros_pub.publish(q, qd)
-        print(qd)
+        if VISUAL:
+            ros_pub.publish(q, qd) #type: ignore
+        # print(qd)
+        print(q)
 
-        # sleep(0.05)
+        sleep(0.01)
 
 class RosPub():
     def __init__(self, robot_name: str, axis_names: List[str]):
@@ -85,7 +112,7 @@ class RosPub():
         uuid = roslaunch.rlutil.get_or_generate_uuid(None, False) #type: ignore
         roslaunch.configure_logging(uuid)
         package = rospkg.RosPack().get_path('robot_arm') + '/launch/visualize.launch'
-        cli_args = [package, f'robot_name:={robot_name}, test_joints:=false']
+        cli_args = [package, f'robot_name:={robot_name}','test_joints:=false']
         roslaunch_args = cli_args[1:]
         roslaunch_file = [(roslaunch.rlutil.resolve_launch_arguments(cli_args)[0], roslaunch_args)] #type: ignore
         parent = roslaunch.parent.ROSLaunchParent(uuid, roslaunch_file) #type: ignore
