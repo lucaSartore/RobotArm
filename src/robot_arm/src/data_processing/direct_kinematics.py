@@ -3,6 +3,7 @@ from internal_types.array import Array
 from internal_types.urdf_model import Joint
 from data_loader.load_urdf import load_urdf
 import numpy as np
+from internal_types.array import Array
 
 def build_transf_matrix_from_components(
     x: float,
