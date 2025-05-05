@@ -61,16 +61,16 @@ def run_dynamics():
     qd =  np.array([0.0] * N_JOINS)
     qdd = np.array([0.0] * N_JOINS)
 
-    # qd[0] = 2
+    ## initial velocity
     qd[1] = 1
-    qd[2] = 1
+    qd[2] = 2
 
     robot = RobotWrapper.BuildFromURDF(URDF_FILE_PATH)
 
-    for i in range(6000):
+    for i in range(10000):
         
         # non linear effects (due to inertia and gravity)
-        h = rnea(robot, q, qd, zero_vec)
+        non_linear_effects = -rnea(robot, q, qd, zero_vec)
 
         # q[2] = 0
         # qd[2] = 0
@@ -92,12 +92,11 @@ def run_dynamics():
             # build the inertia matrix partially
             M[:,i] = tau
 
-        basic_forces = -h
-        friction = -np.minimum(np.abs(basic_forces), friction_coefficients) * np.sign(qd) #type: ignore
+        friction = -np.minimum(np.abs(non_linear_effects), friction_coefficients) * np.sign(qd) #type: ignore
         damping = -damping_coefficients * qd
-        end_stop =  (q > q_max) * (efforts * (q_max - q) ) +  (q  < q_min) * (efforts * (q_min - q) )
+        end_stop =  (q > q_max) * (efforts * (q_max - q) ) +  (q  < q_min) * (efforts * (q_min - q) ) #type: ignore
 
-        qdd = np.linalg.inv(M).dot(basic_forces + friction + damping + end_stop) #type: ignore
+        qdd = np.linalg.inv(M).dot(non_linear_effects + friction + damping + end_stop) #type: ignore
 
         # integration
         qd = qd + qdd * DT
