@@ -22,29 +22,32 @@ def run_dynamics():
     # Notes from professor at page 26
     # https://drive.google.com/drive/folders/17MCKvglqk94NsF3zj4OkmZN5_yU-wxtq
 
-    N_JOINS = 5
+
+    joints = load_urdf()
+    joints = [x for x in joints if x.type != "fixed"]
+
+
     VISUAL = True
+    N_JOINS = len(joints)
+    DT = 0.001 #simulation delta time
+    SLEEP_TIME = 0.0 # sleep time to slow down visual
 
-    joins = load_urdf()
-    joins = [x for x in joins if x.type != "fixed"]
 
-
-
-    damping = np.asarray(
+    damping_coefficients = np.asarray(
         [
             x.dynamics.damping if x.dynamics and x.dynamics.damping else 0
-            for x in joins
+            for x in joints
         ]
     )
-    max_friction = np.asarray(
+    friction_coefficients = np.asarray(
         [
             x.dynamics.friction if x.dynamics and x.dynamics.friction else 0
-            for x in joins
+            for x in joints
         ]
     )
 
     if VISUAL:
-        ros_pub = RosPub("arm", [j.name for j in joins])
+        ros_pub = RosPub("arm", [j.name for j in joints])
 
     # sleep to wait rviz to start
     sleep(3)
@@ -56,11 +59,10 @@ def run_dynamics():
 
     # qd[0] = 3
     # qd[1] = -1
-    dt = 0.01
 
     robot = RobotWrapper.BuildFromURDF(URDF_FILE_PATH)
 
-    for i in range(2000):
+    for i in range(40000):
         
         # non linear effects (due to inertia and gravity)
         h = rnea(robot, q, qd, zero_vec)
@@ -85,26 +87,20 @@ def run_dynamics():
             # build the inertia matrix partially
             M[:,i] = tau
 
-        force = -h - damping * qd #type: ignore
+        basic_forces = -h
+        friction = -np.minimum(np.abs(basic_forces), friction_coefficients) * np.sign(qd) #type: ignore
+        damping = -damping_coefficients * qd
 
-        # friction = -np.minimum(np.abs(force), max_friction) * np.sign(force) #type: ignore
-
-        # print(force)
-        # print(friction)
-        # force += friction
-        # calculate new accelerations
-        qdd = np.linalg.inv(M).dot(force) #type: ignore
+        qdd = np.linalg.inv(M).dot(basic_forces + friction + damping) #type: ignore
 
         # integration
-        qd = qd + qdd * dt
-        q = q + qd * dt + 0.5 * qdd * dt**2
+        qd = qd + qdd * DT
+        q = q + qd * DT + 0.5 * qdd * DT**2
 
         if VISUAL:
             ros_pub.publish(q, qd) #type: ignore
-        # print(qd)
-        print(q)
 
-        sleep(0.01)
+        sleep(SLEEP_TIME)
 
 class RosPub():
     def __init__(self, robot_name: str, axis_names: List[str]):
