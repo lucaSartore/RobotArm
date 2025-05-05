@@ -1,5 +1,5 @@
 from time import sleep
-from typing import Union, List
+from typing import Callable, TypeVar, Union, List
 from pinocchio import RobotWrapper
 from constants.path import URDF_FILE_PATH
 import pinocchio as pin
@@ -30,21 +30,25 @@ def run_dynamics():
     VISUAL = True
     N_JOINS = len(joints)
     DT = 0.001 #simulation delta time
-    SLEEP_TIME = 0.0 # sleep time to slow down visual
+    SLEEP_TIME = 0.001 # sleep time to slow down visual
 
 
-    damping_coefficients = np.asarray(
-        [
-            x.dynamics.damping if x.dynamics and x.dynamics.damping else 0
-            for x in joints
-        ]
-    )
-    friction_coefficients = np.asarray(
-        [
-            x.dynamics.friction if x.dynamics and x.dynamics.friction else 0
-            for x in joints
-        ]
-    )
+    T = TypeVar("T")
+    def make_array(items: List[T], fn: Callable[[T], float], default: float):
+        array = []
+        for x in items:
+            try:
+                array.append(fn(x))
+            except:
+                array.append(default)
+        return np.asarray(array)
+
+
+    damping_coefficients = make_array(joints, lambda x: x.dynamics.damping, 0) #type: ignore
+    friction_coefficients = make_array(joints, lambda x: x.dynamics.friction, 0) #type: ignore
+    q_max = make_array(joints, lambda x: x.limit.upper, np.inf) #type: ignore
+    q_min = make_array(joints, lambda x: x.limit.lower, -np.inf) #type: ignore
+    efforts = make_array(joints, lambda x: x.limit.effort, 0) #type: ignore 
 
     if VISUAL:
         ros_pub = RosPub("arm", [j.name for j in joints])
@@ -57,18 +61,19 @@ def run_dynamics():
     qd =  np.array([0.0] * N_JOINS)
     qdd = np.array([0.0] * N_JOINS)
 
-    # qd[0] = 3
-    # qd[1] = -1
+    # qd[0] = 2
+    qd[1] = 1
+    qd[2] = 1
 
     robot = RobotWrapper.BuildFromURDF(URDF_FILE_PATH)
 
-    for i in range(40000):
+    for i in range(6000):
         
         # non linear effects (due to inertia and gravity)
         h = rnea(robot, q, qd, zero_vec)
 
-        q[2] = 0
-        qd[2] = 0
+        # q[2] = 0
+        # qd[2] = 0
 
         # inertia matrix
         M = np.zeros((N_JOINS, N_JOINS))
@@ -90,8 +95,9 @@ def run_dynamics():
         basic_forces = -h
         friction = -np.minimum(np.abs(basic_forces), friction_coefficients) * np.sign(qd) #type: ignore
         damping = -damping_coefficients * qd
+        end_stop =  (q > q_max) * (efforts * (q_max - q) ) +  (q  < q_min) * (efforts * (q_min - q) )
 
-        qdd = np.linalg.inv(M).dot(basic_forces + friction + damping) #type: ignore
+        qdd = np.linalg.inv(M).dot(basic_forces + friction + damping + end_stop) #type: ignore
 
         # integration
         qd = qd + qdd * DT
