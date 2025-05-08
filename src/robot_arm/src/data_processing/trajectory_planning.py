@@ -1,6 +1,10 @@
+import time
 from typing import List, Union
+from data_loader.load_urdf import load_urdf
 from internal_types.array import Array
 import numpy as np
+
+from util.ros_publisher import RosPub
 
 class Trajectory:
     def __init__(self, initial_position: Union[Array, List[float]], final_position: Union[Array, List[float]], time: float):
@@ -45,9 +49,31 @@ def get_trajectory_coefficients(initial_q: float, final_q: float, total_time: fl
     return np.matmul(mat, q) #type: ignore
 
 
-def test():
+def visualize_trajectory():
 
-    t = Trajectory([1,2,3], [3,2,1], 4)
+    TIME_STEP = 0.1
+    DELAY = 0.1
+    TOTAL_TIME = 10
+    start_position: List[float] = [0,0,0,0,0]
+    end_position: List[float] = [3.14,1,2,-3.14/2,1]
 
-    for i in range(101):
-        print(t(4*i/100))
+    trajectory = Trajectory(start_position, end_position, TOTAL_TIME)
+
+    joints = load_urdf()
+    joints = [x for x in joints if x.type != "fixed"]
+    ros_pub = RosPub("arm", [j.name for j in joints])
+    time.sleep(3) #wait for rviz to start
+
+    t: float = 0
+
+    while t < TOTAL_TIME:
+
+        position = trajectory(t)
+
+        ros_pub.publish(position)
+        
+        t += TIME_STEP
+        time.sleep(DELAY)
+
+    #error at the end should be lower then threshold
+    assert ((position - np.array(end_position))**2).mean() <= 0.001 #type: ignore
