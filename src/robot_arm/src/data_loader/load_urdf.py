@@ -3,8 +3,11 @@ from pydantic import TypeAdapter
 import xmltodict
 from constants.path import URDF_FILE_PATH
 from internal_types.urdf_model import Joint
+from functools import lru_cache
 import os
 
+
+@lru_cache
 def load_urdf() -> List[Joint]:
 
     with open(URDF_FILE_PATH) as f:
@@ -19,4 +22,5 @@ def load_urdf() -> List[Joint]:
         assert prev.child == next.parent, "The joins should be loaded in order"
 
     return joins
+
 

@@ -1,9 +1,10 @@
-from typing import List
+from typing import List, Tuple
 from internal_types.array import Array
 from internal_types.urdf_model import Joint
 from data_loader.load_urdf import load_urdf
 import numpy as np
 from internal_types.array import Array
+import math
 
 def build_transf_matrix_from_components(
     x: float,
@@ -31,6 +32,30 @@ def build_transf_matrix_from_components(
         ]
     )
 
+
+def get_components_from_transf_matrix(
+    transf_matrix: Array
+) -> Tuple[List[float], List[float]]:
+    """
+    build the position of a component starting from the transformation matrix
+
+    Return:
+        ([x,y,z], [roll, pitch, yaw])
+    """
+
+    xyz = list(transf_matrix[0:3,3])
+
+    roll = math.atan2(transf_matrix[1,0], transf_matrix[0,0])
+    pitch = math.atan2(
+        -transf_matrix[2,0],
+        math.sqrt(transf_matrix[2,1]**2 + transf_matrix[2,2]**2)
+    )
+    yaw = math.atan2(
+        transf_matrix[2,1] / math.cos(pitch),
+        transf_matrix[2,2] / math.cos(pitch)
+    )
+
+    return xyz, [roll, pitch, yaw]
 
 def build_transf_matrix_from_join(joint: Joint, q: float) -> Array:
     """
@@ -104,7 +129,6 @@ def build_jacobian(joints: List[Joint], qs: List[float]) -> Array:
 
     # slice the z component from the transformation matrix
     def z(mat: Array) -> Array:
-        print(f"z of: \n{mat} is: {mat[0:3,2]}")
         return mat[0:3,2]
 
     # slice the p component from the transformation matrix
@@ -130,6 +154,25 @@ def build_jacobian(joints: List[Joint], qs: List[float]) -> Array:
 
     return jacobian
 
+def build_analytical_jacobian(joints: List[Joint], qs: List[float]) -> Array:
+    geometric_jacobian = build_jacobian(joints, qs)
+
+    # from word frame to EE
+    T_we = get_progressive_transformation_matrixes(joints, qs)[-1]
+
+    _, [roll, pitch, yaw] = get_components_from_transf_matrix(T_we)
+
+    T_pry = np.array([[math.cos(yaw)*math.cos(pitch),  -math.sin(yaw), 0],
+                    [math.sin(yaw)*math.cos(pitch),   math.cos(yaw), 0],
+                    [             -math.sin(pitch),               0, 1]])
+
+    conversion = np.zeros(shape = (6,6), dtype=np.float64)
+    conversion[:3,:3] = np.identity(3)
+    conversion[3:,3:] = T_pry
+
+    analytical_jacobian = np.matmul(conversion, geometric_jacobian) #type: ignore
+    
+    return analytical_jacobian
 
 def test():
     data = load_urdf()
