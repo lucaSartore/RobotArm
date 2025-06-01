@@ -24,6 +24,7 @@ class Trajectory:
         return self.get(time)
 
     def get(self, time: float) -> Array:
+        # time = self.time
         time = np.clip(time, 0, self.time) #type: ignore
         self.times[:] = time
         return np.sum(

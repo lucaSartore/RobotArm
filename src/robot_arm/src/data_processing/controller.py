@@ -1,12 +1,15 @@
-from numpy.typing import _128Bit
 from data_loader.load_urdf import load_urdf
-from data_processing.direct_kinematics import build_jacobian, get_components_from_transf_matrix, get_progressive_transformation_matrixes
+from data_processing.direct_kinematics import (
+    build_jacobian,
+    get_components_from_transf_matrix,
+    get_progressive_transformation_matrixes
+)
 from internal_types.array import Array
 from data_processing.trajectory_planning import Trajectory
 import numpy as np
 import typing
-from typing import Optional
-import math
+from typing import List, Optional
+import matplotlib.pyplot as plt
 
 if typing.TYPE_CHECKING:
     from data_processing.dynamics import Simulator
@@ -16,12 +19,22 @@ class Controller:
     def __init__(self, trajectory: Trajectory):
         self.trajectory = trajectory
         self.joints = load_urdf()
+        self.joints_filtered = [x for x in self.joints if x.type != "fixed"]
         # filter an array of position to only keep the task variables that we
         # want to control (in this case the position and the pitch)
         self.position_filter = [True,True,True,False,True,False]
-        self.kp = 10
-        self.kd = 1
+        self.kp = 2
+        self.kd = 2
+        self.last_update = -1
         self.J_prev: Optional[Array] = None
+
+        self.desired_pose = np.array([0,0,5,0,0])
+        self.desired_pose_relative_weights = np.array([1,1,1,1,1])
+
+        self.errors: List[float] = []
+        self.errors_dot: List[float] = []
+
+
 
     # time derivative of jacobian
     def get_Jd(self, J_current: Array, simulator: "Simulator") -> Array:
@@ -63,21 +76,64 @@ class Controller:
         p = p[self.position_filter]
         pd = pd[self.position_filter]
 
+        e =  p_desired - p
+        ed = pd_desired - pd
+        
+        self.errors.append((e**2).sum()**0.5)
+        self.errors_dot.append((ed**2).sum()**0.5)
 
-        # the direction i want to push the end effector
-        v = pd_desired + self.kp * (p_desired - p) + self.kd * (pd_desired - pd)
+        v = pd_desired + self.kp * e + self.kd * ed
     
         J_pseudo_inv: Array = np.linalg.pinv(J) #type: ignore
 
         # remove some of the axis because I have some freedom of movement
-        J_pseudo_inv = J_pseudo_inv[:,self.position_filter]
-        Jd = Jd[self.position_filter, :]
+        J_pseudo_inv_sliced = J_pseudo_inv[:,self.position_filter]
+        Jd_sliced = Jd[self.position_filter, :]
 
         qdd_desired = np.matmul(
-            J_pseudo_inv, #type: ignore
-            v - np.matmul(Jd, qd) #type: ignore
+            J_pseudo_inv_sliced, #type: ignore
+            v - np.matmul(Jd_sliced, qd) #type: ignore
+        )
+
+        # postural task
+        qdd_desired += np.matmul(
+            (
+                np.identity(len(self.joints_filtered)) -
+                np.matmul(J_pseudo_inv, J) #type: ignore
+            ),
+            self.desired_pose #type: ignore
         )
 
         u = np.matmul(M, qdd_desired) + non_linear_effects #type: ignore
 
         return u
+
+
+
+    def plot_tracking_error(self):
+        # Create a time axis assuming 1 unit per sample
+        time = list(range(len(self.errors)))
+
+        plt.figure(figsize=(12, 6))
+
+        # Plot error
+        plt.subplot(2, 1, 1)
+        plt.plot(time, self.errors, label='Tracking Error')
+        plt.title('Tracking Error')
+        plt.xlabel('Time Step')
+        plt.ylabel('Error')
+        plt.grid(True)
+        plt.legend()
+
+        # Plot error derivative
+        plt.subplot(2, 1, 2)
+        plt.plot(time, self.errors_dot, label='Error Derivative (dot)', color='orange')
+        plt.title('Tracking Error Derivative')
+        plt.xlabel('Time Step')
+        plt.ylabel('Error Derivative')
+        plt.grid(True)
+        plt.legend()
+
+        plt.tight_layout()
+        plt.show()
+

@@ -72,7 +72,7 @@ class Simulator():
         end_stop = (self.q > self.q_max) * (self.efforts * (self.q_max - self.q) ) #type: ignore
         end_stop += (self.q  < self.q_min) * (self.efforts * (self.q_min - self.q) ) #type: ignore
 
-        force = self.non_linear_effects + friction + damping + end_stop
+        force = self.non_linear_effects # + friction + damping + end_stop
 
         if self.controller is not None:
             force += self.controller.get_torque(self)
