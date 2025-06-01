@@ -9,7 +9,10 @@ import numpy as np
 from data_loader.load_urdf import load_urdf
 from internal_types.array import Array
 from util.ros_publisher import RosPub
-from data_processing.controller import Controller
+import typing
+
+if typing.TYPE_CHECKING:
+    from data_processing.controller import Controller
 
 #wrapper around pinocchio, to add type annotations
 def rnea(robot: RobotWrapper, q: Array, qd: Array, qdd: Array) -> Array:
@@ -25,7 +28,7 @@ class Simulator():
         dt = 0.001, #simulation delta time (seconds)
         total_time = 10, #total simulation time (seconds)
         sleep_time = 0.001, # sleep time to slow down visual (seconds)
-        controller: Optional[Controller] = None,
+        controller: Optional["Controller"] = None,
     ):
         joints = load_urdf()
         # constants used for simulation
@@ -66,14 +69,13 @@ class Simulator():
 
         friction = -np.minimum(np.abs(self.non_linear_effects), self.friction_coefficients) * np.sign(self.qd) #type: ignore
         damping = -self.damping_coefficients * self.qd
-        end_stop = \
-            (self.q > self.q_max) * (self.efforts * (self.q_max - self.q) ) + \
-            (self.q  < self.q_min) * (self.efforts * (self.q_min - self.q) )
+        end_stop = (self.q > self.q_max) * (self.efforts * (self.q_max - self.q) ) #type: ignore
+        end_stop += (self.q  < self.q_min) * (self.efforts * (self.q_min - self.q) ) #type: ignore
 
         force = self.non_linear_effects + friction + damping + end_stop
 
         if self.controller is not None:
-            force += self.controller.get_torque(self.q, self.qd, self.time)
+            force += self.controller.get_torque(self)
 
         self.qdd = np.linalg.inv(self.M).dot(force) #type: ignore
 

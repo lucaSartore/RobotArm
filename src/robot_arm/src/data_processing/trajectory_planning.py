@@ -11,6 +11,7 @@ class Trajectory:
         initial_position = [float(x) for x in initial_position]
         final_position = [float(x) for x in final_position]
 
+        self.time = time
         self.pow = np.array(range(6)).astype(np.float64)
         self.times = np.ones((6,), dtype = np.float64)
         self.coefficients: Array = np.stack([ #type: ignore
@@ -20,18 +21,27 @@ class Trajectory:
 
 
     def __call__(self, time: float) -> Array:
+        return self.get(time)
+
+    def get(self, time: float) -> Array:
+        time = np.clip(time, 0, self.time) #type: ignore
         self.times[:] = time
         return np.sum(
             self.coefficients * self.times ** self.pow, #type: ignore
             axis=1
         )
 
+    def get_derivative(self, time: float) -> Array:
+        # todo: this can be improved by mathematically differentiate the polynomial trajectory
+        return (
+            self.get(time + 0.001) - self.get(time) #type: ignore
+        ) / 0.001
             
 
-def get_trajectory_coefficients(initial_q: float, final_q: float, total_time: float) -> Array:
+def get_trajectory_coefficients(initial_position: float, final_position: float, total_time: float) -> Array:
 
 
-    q = np.array([initial_q,0,0,final_q,0,0])
+    q = np.array([initial_position,0,0,final_position,0,0])
 
     t = total_time
     
