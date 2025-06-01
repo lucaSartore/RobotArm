@@ -16,7 +16,12 @@ if typing.TYPE_CHECKING:
 
 class Controller:
 
-    def __init__(self, trajectory: Trajectory):
+    def __init__(
+            self,
+            trajectory: Trajectory,
+            position_filter: List[bool]
+            
+    ):
         self.trajectory = trajectory
         self.joints = load_urdf()
         self.joints_filtered = [x for x in self.joints if x.type != "fixed"]
@@ -28,7 +33,8 @@ class Controller:
         self.last_update = -1
         self.J_prev: Optional[Array] = None
 
-        self.desired_pose = np.array([0,0,2.5,0,0])
+        self.desired_pose = [1.71219775, 0.03364353, 3.14418591, 1.02042638, -0.24256393]
+        # self.desired_pose = np.array([3,0,4,0,0])
         self.desired_pose_relative_weights = np.array([1,1,1,1,1])
 
         self.errors: List[float] = []
@@ -89,24 +95,26 @@ class Controller:
         # remove some of the axis because I have some freedom of movement
         J_pseudo_inv_sliced = J_pseudo_inv[:,self.position_filter]
         Jd_sliced = Jd[self.position_filter, :]
+        J_sliced = J[self.position_filter, :]
 
-        postural_task: Array = (self.desired_pose - q) * self.desired_pose_relative_weights #type: ignore
+
         qdd_desired = np.matmul(
             J_pseudo_inv_sliced, #type: ignore
-            v - np.matmul(Jd_sliced, postural_task) #type: ignore
+            v - np.matmul(Jd_sliced, qd) #type: ignore
         )
 
         # postural task
+        postural_task: Array = (self.desired_pose - q)
         qdd_desired += np.matmul(
             (
                 np.identity(len(self.joints_filtered)) -
                 np.matmul(J_pseudo_inv, J) #type: ignore
             ),
-            self.desired_pose #type: ignore
+            postural_task #type: ignore
         )
+        
 
         u = np.matmul(M, qdd_desired) + non_linear_effects #type: ignore
-
         return u
 
 
