@@ -23,12 +23,12 @@ class Controller:
         # filter an array of position to only keep the task variables that we
         # want to control (in this case the position and the pitch)
         self.position_filter = [True,True,True,False,True,False]
-        self.kp = 2
-        self.kd = 2
+        self.kp = 100
+        self.kd = 25
         self.last_update = -1
         self.J_prev: Optional[Array] = None
 
-        self.desired_pose = np.array([0,0,5,0,0])
+        self.desired_pose = np.array([0,0,2.5,0,0])
         self.desired_pose_relative_weights = np.array([1,1,1,1,1])
 
         self.errors: List[float] = []
@@ -90,9 +90,10 @@ class Controller:
         J_pseudo_inv_sliced = J_pseudo_inv[:,self.position_filter]
         Jd_sliced = Jd[self.position_filter, :]
 
+        postural_task: Array = (self.desired_pose - q) * self.desired_pose_relative_weights #type: ignore
         qdd_desired = np.matmul(
             J_pseudo_inv_sliced, #type: ignore
-            v - np.matmul(Jd_sliced, qd) #type: ignore
+            v - np.matmul(Jd_sliced, postural_task) #type: ignore
         )
 
         # postural task

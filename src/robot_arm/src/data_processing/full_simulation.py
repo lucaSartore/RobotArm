@@ -17,25 +17,19 @@ def run_full_simulation():
     Te = get_progressive_transformation_matrixes(joints, [0,0,0,0,0])[-1]
     xyz, rpy = get_components_from_transf_matrix(Te)
     initial_position = xyz + [rpy[1]]
-    final_position = [4,1,2,math.radians(-30)]
+    final_position = [1,2,1,math.radians(-30)]
 
     trajectory = Trajectory(initial_position, final_position, 7)
 
-    # for i in range(10):
-    #     print("=======================================")
-    #     print(trajectory(i*7/10))
-    #     print(trajectory.get_derivative(i*7/10))
-    # return
-
     controller = Controller(trajectory)
-
     
     simulator = Simulator(
         controller=controller,
-        visual=False,
-        sleep_time=0
+        # visual=False,
+        # sleep_time=0
     )
 
     simulator.run()
 
     controller.plot_tracking_error()
+
