@@ -1,5 +1,6 @@
+from os import times_result
 from time import sleep
-from typing import Callable, TypeVar, List
+from typing import Callable, TypeVar, List, Optional
 from pinocchio import RobotWrapper
 from constants.path import URDF_FILE_PATH
 import pinocchio as pin
@@ -8,28 +9,128 @@ import numpy as np
 from data_loader.load_urdf import load_urdf
 from internal_types.array import Array
 from util.ros_publisher import RosPub
-
+from data_processing.controller import Controller
 
 #wrapper around pinocchio, to add type annotations
 def rnea(robot: RobotWrapper, q: Array, qd: Array, qdd: Array) -> Array:
     return pin.rnea(robot.model, robot.data, q, qd, qdd) #type: ignore
 
-def run_dynamics():
-    # Notes from professor at page 26
-    # https://drive.google.com/drive/folders/17MCKvglqk94NsF3zj4OkmZN5_yU-wxtq
+
+T = TypeVar("T")
+class Simulator():
+    
+    def __init__(
+        self,
+        visual = True,
+        dt = 0.001, #simulation delta time (seconds)
+        total_time = 10, #total simulation time (seconds)
+        sleep_time = 0.001, # sleep time to slow down visual (seconds)
+        controller: Optional[Controller] = None,
+    ):
+        joints = load_urdf()
+        # constants used for simulation
+        self.joints = [x for x in joints if x.type != "fixed"]
+        self.n_joints = len(self.joints)
+        self.visual = visual
+        self.dt = dt
+        self.total_time = total_time
+        self.sleep_time = sleep_time
+        self.controller = controller
+        self.zero_vec = np.array([0.0] * self.n_joints)
+        self.robot = RobotWrapper.BuildFromURDF(URDF_FILE_PATH)
+
+        self.damping_coefficients = \
+            Simulator.make_array(self.joints, lambda x: x.dynamics.damping, 0) #type: ignore
+        self.friction_coefficients = \
+            Simulator.make_array(self.joints, lambda x: x.dynamics.friction, 0) #type: ignore
+        self.q_max = \
+            Simulator.make_array(self.joints, lambda x: x.limit.upper, np.inf) #type: ignore
+        self.q_min = \
+            Simulator.make_array(self.joints, lambda x: x.limit.lower, -np.inf) #type: ignore
+        self.efforts = \
+            Simulator.make_array(self.joints, lambda x: x.limit.effort, 0) #type: ignore 
+
+        # simulation variables
+        self.q =   np.array([0.0] * self.n_joints)
+        self.qd =  np.array([0.0] * self.n_joints)
+        self.qdd = np.array([0.0] * self.n_joints)
+        self.time = 0.0
+
+        
+        # simulation variables that are cashed
+        self._M: Optional[Array] = None
+        self._non_linear_effects: Optional[Array] = None
+
+    def time_step(self):
 
 
-    joints = load_urdf()
-    joints = [x for x in joints if x.type != "fixed"]
+        friction = -np.minimum(np.abs(self.non_linear_effects), self.friction_coefficients) * np.sign(self.qd) #type: ignore
+        damping = -self.damping_coefficients * self.qd
+        end_stop = \
+            (self.q > self.q_max) * (self.efforts * (self.q_max - self.q) ) + \
+            (self.q  < self.q_min) * (self.efforts * (self.q_min - self.q) )
+
+        force = self.non_linear_effects + friction + damping + end_stop
+
+        if self.controller is not None:
+            force += self.controller.get_torque(self.q, self.qd, self.time)
+
+        self.qdd = np.linalg.inv(self.M).dot(force) #type: ignore
+
+        # integration
+        self.qd = self.qd + self.qdd * self.dt
+        self.q = self.q + self.qd * self.dt + 0.5 * self.qdd * self.dt **2
+
+        
+        #reset the property that will need to be  re-calculated as the robot has moved:
+        self._M = None
+        self._non_linear_effects = None
 
 
-    VISUAL = True
-    N_JOINS = len(joints)
-    DT = 0.001 #simulation delta time
-    SLEEP_TIME = 0.001 # sleep time to slow down visual
+    def run(self):
 
+        if self.visual:
+            ros_pub = RosPub("arm", [j.name for j in self.joints])
+            sleep(3)
+        
+        while self.time < self.total_time:
+            self.time_step()
+            self.time += self.dt
 
-    T = TypeVar("T")
+            if self.visual:
+                ros_pub.publish(self.q, self.qd) #type: ignore
+
+            sleep(self.sleep_time)
+
+    @property
+    def M(self) -> Array:
+        if self._M is None:
+            self._M = np.zeros((self.n_joints, self.n_joints))
+            for i in range(self.n_joints):
+                ei = self.zero_vec.copy()
+                ei[i] = 1
+                # the torque generated to keep G stable
+                g_effect = rnea(self.robot, self.q, self.zero_vec, self.zero_vec)
+
+                # the torques required to generate an unit acceleration on vector i 
+                tau = rnea(self.robot, self.q, self.zero_vec,ei)
+                
+                # compensation for gravity effect
+                tau -= g_effect #type: ignore
+
+                # build the inertia matrix partially
+                self._M[:,i] = tau
+
+        return self._M
+         
+    @property
+    def non_linear_effects(self) -> Array:
+        if self._non_linear_effects is None:
+            self._non_linear_effects = -rnea(self.robot, self.q, self.qd, self.zero_vec)
+        assert self._non_linear_effects is not None
+        return self._non_linear_effects
+
+    @staticmethod
     def make_array(items: List[T], fn: Callable[[T], float], default: float):
         array = []
         for x in items:
@@ -40,67 +141,6 @@ def run_dynamics():
         return np.asarray(array)
 
 
-    damping_coefficients = make_array(joints, lambda x: x.dynamics.damping, 0) #type: ignore
-    friction_coefficients = make_array(joints, lambda x: x.dynamics.friction, 0) #type: ignore
-    q_max = make_array(joints, lambda x: x.limit.upper, np.inf) #type: ignore
-    q_min = make_array(joints, lambda x: x.limit.lower, -np.inf) #type: ignore
-    efforts = make_array(joints, lambda x: x.limit.effort, 0) #type: ignore 
-
-    if VISUAL:
-        ros_pub = RosPub("arm", [j.name for j in joints])
-
-    # sleep to wait rviz to start
-    sleep(3)
-    zero_vec = np.array([0.0] * N_JOINS)
-
-    q =   np.array([0.0] * N_JOINS)
-    qd =  np.array([0.0] * N_JOINS)
-    qdd = np.array([0.0] * N_JOINS)
-
-    ## initial velocity
-    qd[1] = 1
-    qd[2] = 2
-
-    robot = RobotWrapper.BuildFromURDF(URDF_FILE_PATH)
-
-    for i in range(10000):
-        
-        # non linear effects (due to inertia and gravity)
-        non_linear_effects = -rnea(robot, q, qd, zero_vec)
-
-        # q[2] = 0
-        # qd[2] = 0
-
-        # inertia matrix
-        M = np.zeros((N_JOINS, N_JOINS))
-        for i in range(N_JOINS):
-            ei = zero_vec.copy()
-            ei[i] = 1
-            # the torque generated to keep G stable
-            g_effect = rnea(robot, q, zero_vec, zero_vec)
-
-            # the torques required to generate an unit acceleration on vector i 
-            tau = rnea(robot, q, zero_vec,ei)
-            
-            # compensation for gravity effect
-            tau -= g_effect #type: ignore
-
-            # build the inertia matrix partially
-            M[:,i] = tau
-
-        friction = -np.minimum(np.abs(non_linear_effects), friction_coefficients) * np.sign(qd) #type: ignore
-        damping = -damping_coefficients * qd
-        end_stop =  (q > q_max) * (efforts * (q_max - q) ) +  (q  < q_min) * (efforts * (q_min - q) ) #type: ignore
-
-        qdd = np.linalg.inv(M).dot(non_linear_effects + friction + damping + end_stop) #type: ignore
-
-        # integration
-        qd = qd + qdd * DT
-        q = q + qd * DT + 0.5 * qdd * DT**2
-
-        if VISUAL:
-            ros_pub.publish(q, qd) #type: ignore
-
-        sleep(SLEEP_TIME)
-
-
+def test_dynamics():
+    simulator = Simulator()
+    simulator.run()
