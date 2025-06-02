@@ -2,7 +2,7 @@ from numpy.typing import _128Bit
 from data_loader.load_urdf import load_urdf
 from data_processing.direct_kinematics import build_jacobian, get_components_from_transf_matrix, get_progressive_transformation_matrixes
 from internal_types.array import Array
-from data_processing.trajectory_planning import JointTrajectory, Trajectory
+from data_processing.trajectory_planning import JointTrajectory, Trajectory, SimpleTrajectory
 import numpy as np
 import typing
 from typing import Optional
@@ -19,36 +19,16 @@ def run_full_simulation():
     initial_position = xyz + [rpy[1]]
     final_position = [1,2,1,math.radians(-30)]
 
-    # trajectory = JointTrajectory(
-    #     [0,4,7],
-    #     [
-    #         initial_position,
-    #         [1,2,2,math.radians(-45)],
-    #         final_position
-    #     ],
-    #     [
-    #         [0,0,0,0],
-    #         [0,0,0,0],
-    #         [0,0,0,0]
-    #     ]
-    # )
-
-
-    trajectory = JointTrajectory(
-        [0,7],
-        [
-            initial_position,
-            final_position
-        ],
-        [
-            [0,0,0,0],
-            [0,0,0,0]
-        ]
+    trajectory = SimpleTrajectory(
+        initial_position,
+        final_position,
+        7
     )
 
     controller = Controller(
         trajectory,
-        [True,True,True,False,True,False]
+        [True,True,True,False,True,False],
+        [0,0,0,0,0]
     )
     
     simulator = Simulator(
@@ -59,5 +39,4 @@ def run_full_simulation():
 
     simulator.run()
 
-    # controller.plot_tracking_error()
-
+    controller.plot_tracking_error()

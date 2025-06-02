@@ -134,19 +134,19 @@
   <link name="secondary_arm_link">
     <visual>
       <geometry>
-        <box size="3.2 0.07 0.07"/>
+        <box size="2.2 0.07 0.07"/>
       </geometry>
-      <origin rpy="0 0 0" xyz="1.4 0.0 0.0"/>
+      <origin rpy="0 0 0" xyz="0.9 0.0 0.0"/>
     </visual>
     <collision>
       <geometry>
         <box size="3.2 0.07 0.07"/>
       </geometry>
-      <origin rpy="0 0 0" xyz="1.4 0.0 0.0"/>
+      <origin rpy="0 0 0" xyz="0.9 0.0 0.0"/>
     </collision>
     <inertial>
       <mass value="1.0"/>
-      <origin rpy="0 0 0" xyz="1.4 0.0 0.0"/>
+      <origin rpy="0 0 0" xyz="0.9 0.0 0.0"/>
       <inertia ixx="0.0008167" ixy="0.0" ixz="0.0" iyy="0.8537" iyz="0.0" izz="0.8537"/>
     </inertial>
   </link>
@@ -154,7 +154,7 @@
   <joint name="second_last_join" type="fixed">
     <parent link="secondary_arm_link"/>
     <child link="third_arm_link"/>
-    <origin rpy="0.0 0.0 -1.570796325" xyz="3.0 0.0 0.0"/>
+    <origin rpy="0.0 0.0 -1.570796325" xyz="2.0 0.0 0.0"/>
   </joint>
 
   <link name="third_arm_link">

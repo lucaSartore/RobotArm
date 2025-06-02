@@ -19,7 +19,8 @@ class Controller:
     def __init__(
             self,
             trajectory: Trajectory,
-            position_filter: List[bool]
+            position_filter: List[bool],
+            desired_pose: List[float]
             
     ):
         self.trajectory = trajectory
@@ -33,9 +34,7 @@ class Controller:
         self.last_update = -1
         self.J_prev: Optional[Array] = None
 
-        self.desired_pose = [1.71219775, 0.03364353, 3.14418591, 1.02042638, -0.24256393]
-        # self.desired_pose = np.array([3,0,4,0,0])
-        self.desired_pose_relative_weights = np.array([1,1,1,1,1])
+        self.desired_pose = desired_pose
 
         self.errors: List[float] = []
         self.errors_dot: List[float] = []
@@ -95,7 +94,6 @@ class Controller:
         # remove some of the axis because I have some freedom of movement
         J_pseudo_inv_sliced = J_pseudo_inv[:,self.position_filter]
         Jd_sliced = Jd[self.position_filter, :]
-        J_sliced = J[self.position_filter, :]
 
 
         qdd_desired = np.matmul(
@@ -104,7 +102,7 @@ class Controller:
         )
 
         # postural task
-        postural_task: Array = (self.desired_pose - q)
+        postural_task: Array = 1.0 * (self.desired_pose - q)
         qdd_desired += np.matmul(
             (
                 np.identity(len(self.joints_filtered)) -
@@ -112,7 +110,6 @@ class Controller:
             ),
             postural_task #type: ignore
         )
-        
 
         u = np.matmul(M, qdd_desired) + non_linear_effects #type: ignore
         return u

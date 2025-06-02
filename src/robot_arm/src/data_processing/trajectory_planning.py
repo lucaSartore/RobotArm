@@ -21,6 +21,10 @@ class Trajectory:
         return (
             self.get(time + 0.001) - self.get(time)  # type: ignore
         ) / 0.001
+    
+    @abstractmethod
+    def get_stage(self, time: float) -> float:
+        ...
 
 
 
@@ -65,6 +69,10 @@ class JointTrajectory(Trajectory):
         return self.get(time)
 
 
+    def get_stage(self, time: float) -> float:
+        return time/sum(x.time for x in self.trajectories)
+
+
 class SimpleTrajectory(Trajectory):
     def __init__(
         self,
@@ -98,6 +106,10 @@ class SimpleTrajectory(Trajectory):
             self.coefficients * self.times ** self.pow,  # type: ignore
             axis=1
         )
+
+
+    def get_stage(self, time: float) -> float:
+        return time/self.time
 
 
 
