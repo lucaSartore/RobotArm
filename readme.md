@@ -27,3 +27,43 @@ To instead run one of the python scripts you can use
 ```bash
 rosrun robot_arm main.py
 ```
+
+## CLI description
+
+The main.py has a small cli tool built into it that allows you to run the different part of the project
+Here is a short documentation on the CLI:
+
+
+### Usage
+
+Run the default **full simulation**:
+
+```bash
+rosrun robot_arm main.py
+```
+
+Run a specific mode by passing it as an argument:
+
+```bash
+rosrun robot_arm main.py test_dynamics
+rosrun robot_arm main.py test_dynamics_with_initial_velocity
+rosrun robot_arm main.py test_inverse_kinematics
+rosrun robot_arm main.py test_inverse_kinematics_with_postural
+```
+
+### Available Modes
+
+* `run_full_simulation` – Full simulation pipeline (default)
+* `test_dynamics` – Evaluate dynamics without initial velocity
+* `test_dynamics_with_initial_velocity` – Dynamics test with initial motion
+* `test_inverse_kinematics` – Basic inverse kinematics test
+* `test_inverse_kinematics_with_postural` – Test IK with postural optimization
+
+
+## Requirements
+
+The project has a few extra requirements with respect to a standard ros project.
+They are all listed in [requirements.txt](./src/robot_arm/requirements.txt).
+In particular I installed a few libraries to parse and validate xml as well
+as updating the numpy version to have support for the `typing` module.
+
