@@ -146,3 +146,10 @@ class Simulator():
 def test_dynamics():
     simulator = Simulator()
     simulator.run()
+
+
+def test_dynamics_with_initial_velocity():
+    simulator = Simulator()
+    simulator.q[2] = 3
+    simulator.qd[0] = 1
+    simulator.run()

@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 from data_processing.full_simulation import run_full_simulation
-from data_processing.inverse_kinematic import test_inverse_kinematics_with_postural
+from data_processing.inverse_kinematic import test_inverse_kinematics_with_postural, test_inverse_kinematics
+from data_processing.dynamics import test_dynamics, test_dynamics_with_initial_velocity
 
-# test_inverse_kinematics_with_postural()
+test_dynamics_with_initial_velocity()
+test_dynamics()
+test_inverse_kinematics_with_postural()
 run_full_simulation()
 

@@ -159,12 +159,12 @@ def test_inverse_kinematics():
 
     initial_guess: list[float] = [2, 1, 1, 0, 0]
     # position of the end effector (x,y,z)
-    position: List[Union[float, None]] = [4,4,1]
+    position: List[Union[float, None]] = [1,2,1]
     # orientation of the end effector (roll, pitch, yaw.) orient with 30 degrees angle ad the end like specifications
-    orientation: List[Union[float, None]] = [None, None, None]
-    # orientation: List[Union[float, None]] = [None, math.radians(-30), None]
+    # orientation: List[Union[float, None]] = [None, None, None]
+    orientation: List[Union[float, None]] = [None, math.radians(-30), None]
 
-    inverse_kinematic(joints, position, orientation, initial_guess, visualize=False)
+    inverse_kinematic(joints, position, orientation, initial_guess, visualize=True)
 
 
 def test_inverse_kinematics_with_postural():
