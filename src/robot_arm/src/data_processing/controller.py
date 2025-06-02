@@ -62,6 +62,7 @@ class Controller:
         # the desired position and position derivation
         p_desired = self.trajectory(time)
         pd_desired = self.trajectory.get_derivative(time)
+        pdd_desired = self.trajectory.get_secon_derivative(time)
 
 
         Te = get_progressive_transformation_matrixes(self.joints, list(q))[-1]
@@ -87,7 +88,7 @@ class Controller:
         self.errors.append((e**2).sum()**0.5)
         self.errors_dot.append((ed**2).sum()**0.5)
 
-        v = pd_desired + self.kp * e + self.kd * ed
+        v = pdd_desired + self.kp * e + self.kd * ed
     
         J_pseudo_inv: Array = np.linalg.pinv(J) #type: ignore
 

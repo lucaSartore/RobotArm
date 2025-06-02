@@ -21,6 +21,12 @@ class Trajectory:
         return (
             self.get(time + 0.001) - self.get(time)  # type: ignore
         ) / 0.001
+
+
+    def get_secon_derivative(self, time: float) -> Array:
+        return (
+            self.get_derivative(time + 0.001) - self.get_derivative(time)  # type: ignore
+        ) / 0.001
     
     @abstractmethod
     def get_stage(self, time: float) -> float:
