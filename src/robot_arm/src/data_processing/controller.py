@@ -20,8 +20,8 @@ class Controller:
             self,
             trajectory: Trajectory,
             position_filter: List[bool],
-            desired_pose: List[float]
-            
+            desired_pose: List[float],
+            desired_pose_weight: List[float]
     ):
         self.trajectory = trajectory
         self.joints = load_urdf()
@@ -35,6 +35,7 @@ class Controller:
         self.J_prev: Optional[Array] = None
 
         self.desired_pose = desired_pose
+        self.desired_pose_weight = desired_pose_weight
 
         self.errors: List[float] = []
         self.errors_dot: List[float] = []
@@ -103,7 +104,7 @@ class Controller:
         )
 
         # postural task
-        postural_task: Array = 1.0 * (self.desired_pose - q)
+        postural_task: Array = (self.desired_pose - q) * self.desired_pose_weight
         qdd_desired += np.matmul(
             (
                 np.identity(len(self.joints_filtered)) -

@@ -28,7 +28,8 @@ def run_full_simulation():
     controller = Controller(
         trajectory,
         [True,True,True,False,True,False],
-        [0,0,0,0,0]
+        [0,0,0,0,0],
+        [0,1,0.2,0,0]
     )
     
     simulator = Simulator(
