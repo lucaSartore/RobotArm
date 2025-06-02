@@ -1,6 +1,11 @@
 # Robot Arm
 
 This repository contains an implementation of a robot arm for the "Introduction to Robotics" course at the University of Trento
+## Video
+[![Watch the demo video](https://img.youtube.com/vi/NH_AHPulZkg/0.jpg)](https://www.youtube.com/watch?v=NH_AHPulZkg)
+## Project Description
+
+An in depth report for this project can be seen [here](./readme.md)
 
 ## Getting started
 
