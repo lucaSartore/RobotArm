@@ -27,7 +27,7 @@ class Controller:
         self.joints_filtered = [x for x in self.joints if x.type != "fixed"]
         # filter an array of position to only keep the task variables that we
         # want to control (in this case the position and the pitch)
-        self.position_filter = [True,True,True,False,True,False]
+        self.position_filter = position_filter
         self.kp = 100
         self.kd = 25
         self.last_update = -1
